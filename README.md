@@ -40,6 +40,39 @@ pnpm dsh web
 
 `pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
 
+## Linux desktop (Arch/CachyOS fork build)
+
+This fork adds an unsigned Linux x64 desktop target with a validated Linux runtime. Requirements (Node.js ≥ 24.9):
+
+```sh
+sudo pacman -S --needed nodejs npm pnpm git base-devel
+```
+
+Run from this checkout after `pnpm install && pnpm run build`:
+
+```sh
+pnpm run start:desktop      # Electron desktop window (development layout)
+pnpm run start:web          # the same UI served at http://127.0.0.1:3080
+```
+
+Build and install the packaged desktop app:
+
+```sh
+pnpm run package:desktop:linux:x64:dir
+rm -rf ~/.local/opt/deepseek-harness
+cp -a apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked ~/.local/opt/deepseek-harness
+```
+
+Point a menu entry at `~/.local/opt/deepseek-harness/deepseek-harness`, or run `./update-desktop.sh` to pull, rebuild, repackage and reinstall in one step. The full pipeline (payload smoke, Host boot, DOCX/XLSX/PPTX→PDF conversion) runs as part of packaging.
+
+Notes:
+
+- The Linux Host runs under the payload's bundled standalone Node: Electron's Linux binary links the system glib that collides with the prebuilt sharp binding and SIGSEGVs at the first image decode ([electron#46323](https://github.com/electron/electron/issues/46323)). Running the Host on plain Node removes the crash class; image attachments work.
+- The LibreOffice engine resolver takes its WASM fallback on Linux because upstream publishes no native Linux engine package.
+- The packaged app shows the "DSH Local Build" label; the official branding is reserved for signed builds.
+- On networks where GitHub release assets return 504, prefix the packaging or Electron download commands with `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`.
+- Web and desktop keep separate Harness homes, so sessions, credentials and plugins do not cross over.
+
 ## Community and support
 
 - Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
