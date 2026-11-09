@@ -1,4 +1,4 @@
-/** Install and use a local dependency with the packaged pnpm and Electron Node launcher. */
+/** Install and use a local dependency with the packaged pnpm and the platform's Node launcher. */
 
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -13,12 +13,19 @@ import { delimiter, join } from 'node:path'
  * @returns {Promise<void>} Resolves after execution and removal of the private installation.
  */
 export async function checkPnpm(resourcesRuntime) {
-  assert.ok(process.versions.electron, 'Run the package-manager smoke with Electron Node mode')
-  assert.equal(existsSync(join(resourcesRuntime, 'pnpm')), false, 'Desktop must ship only primary-runtime pnpm')
+  // Linux runs the payload under the bundled standalone Node; every other target runs under
+  // Electron's Node mode, so the production-runtime identity check follows the platform.
   const primary = join(resourcesRuntime, 'primary-runtime')
+  const manifest = JSON.parse(readFileSync(join(primary, 'runtime.json'), 'utf8'))
+  if (process.platform === 'linux') {
+    assert.equal(process.versions.electron, undefined, 'Run the Linux package-manager smoke under the payload\'s bundled standalone Node')
+    assert.equal(process.versions.node, manifest.node, 'Run the Linux package-manager smoke with the payload manifest\'s Node version')
+  } else {
+    assert.ok(process.versions.electron, 'Run the package-manager smoke with Electron Node mode')
+  }
+  assert.equal(existsSync(join(resourcesRuntime, 'pnpm')), false, 'Desktop must ship only primary-runtime pnpm')
   const pnpm = join(primary, 'dependencies', 'pnpm', 'bin', 'pnpm.mjs')
   const versions = JSON.parse(readFileSync(join(resourcesRuntime, 'versions.json'), 'utf8'))
-  const manifest = JSON.parse(readFileSync(join(primary, 'runtime.json'), 'utf8'))
   assert.equal(versions.pnpm, manifest.pnpm)
   const scratch = mkdtempSync(join(tmpdir(), 'desktop-pnpm-smoke-'))
   try {
@@ -36,7 +43,7 @@ export async function checkPnpm(resourcesRuntime) {
 const assert = require('node:assert/strict')
 assert.equal(require('desktop-pnpm-smoke-dependency').answer, 42)
 assert.equal(process.execPath, ${JSON.stringify(process.execPath)})
-assert.ok(process.versions.electron)
+assert.ok(${process.platform === 'linux' ? '!' : ''}process.versions.electron)
 assert.ok(process.execArgv.includes('--expose-internals'))
 assert.equal(typeof require('internal/modules/esm/loader').getOrInitializeCascadedLoader, 'function')
 console.log('desktop-node-script-ok')
@@ -65,5 +72,5 @@ console.log('desktop-node-script-ok')
 if (import.meta.main) {
   assert.ok(process.argv[2], 'Pass the packaged runtime directory')
   await checkPnpm(process.argv[2])
-  console.log('desktop pnpm: offline installation and Electron Node package script passed')
+  console.log('desktop pnpm: offline installation and packaged Node package script passed')
 }

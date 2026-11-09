@@ -45,8 +45,11 @@ const RUNTIME_ROOT = BUILD_PATHS.runtime
 const PNPM_BUILD_STATE = BUILD_PATHS.dshPnpm
 const PACKAGE_SET_ROOT = BUILD_PATHS.packageSet
 const PACKAGE_TARGET = desktopTargetPlatform(resolveDesktopBuildTarget())
-const NODE = join(BUILD_PATHS.electron, PACKAGE_TARGET.platform === 'win32' ? 'electron.exe'
-  : PACKAGE_TARGET.platform === 'darwin' ? 'Electron.app/Contents/MacOS/Electron' : 'electron')
+// The Linux Host runs under the payload's bundled standalone Node (it cannot read ASAR and
+// Electron's Node crashes the prebuilt sharp), so its smoke and pnpm runs use the same Node.
+const NODE = PACKAGE_TARGET.platform === 'linux'
+  ? join(RUNTIME_ROOT, 'primary-runtime', 'dependencies', 'node', 'bin', 'node')
+  : join(BUILD_PATHS.electron, PACKAGE_TARGET.platform === 'win32' ? 'electron.exe' : 'Electron.app/Contents/MacOS/Electron')
 const PNPM = join(RUNTIME_ROOT, 'primary-runtime', 'dependencies', 'pnpm', 'bin', 'pnpm.mjs')
 
 function manifestVersion(path: string, subject: string): string {
