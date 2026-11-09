@@ -17,8 +17,7 @@ import { prepareCommandLink } from './prepare-command-link.ts'
 const BUILD_PATHS = resolveDesktopTargetBuildPaths()
 const RUNTIME_ROOT = BUILD_PATHS.runtime
 
-// Release preparation supports macOS and Windows only; main() rejects linux-x64 before reaching these helpers.
-type DesktopTarget = { readonly platform: 'win32' | 'darwin'; readonly arch: 'arm64' | 'x64' }
+type DesktopTarget = { readonly platform: 'win32' | 'darwin' | 'linux'; readonly arch: 'arm64' | 'x64' }
 
 /** Extract the target Electron distribution and return its embedded Node version. */
 async function prepareElectron({ platform, arch }: DesktopTarget): Promise<string> {
@@ -28,7 +27,8 @@ async function prepareElectron({ platform, arch }: DesktopTarget): Promise<strin
     () => downloadArtifact({ version, platform, arch, artifactName: 'electron', cacheRoot: BUILD_PATHS.downloads }))
   rmSync(BUILD_PATHS.electron, { recursive: true, force: true })
   await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'extract:electron', () => extractZip(archive, { dir: BUILD_PATHS.electron }))
-  const executable = join(BUILD_PATHS.electron, platform === 'win32' ? 'electron.exe' : 'Electron.app/Contents/MacOS/Electron')
+  const executable = join(BUILD_PATHS.electron, platform === 'win32' ? 'electron.exe'
+    : platform === 'darwin' ? 'Electron.app/Contents/MacOS/Electron' : 'electron')
   return execFileSync(executable, ['-p', 'process.versions.node'], {
     encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
   }).trim()
@@ -51,9 +51,7 @@ function prepareCli({ platform, arch }: DesktopTarget): void {
 
 async function main(): Promise<void> {
   const { values } = parseArgs({ options: { 'defer-primary-runtime-smoke': { type: 'boolean', default: false } } })
-  const releaseTarget = resolveDesktopBuildTarget()
-  if (releaseTarget === 'linux-x64') throw new Error('desktop runtime preparation supports macOS and Windows release targets only')
-  const target = desktopTargetPlatform(releaseTarget)
+  const target = desktopTargetPlatform(resolveDesktopBuildTarget())
   rmSync(RUNTIME_ROOT, { recursive: true, force: true })
   mkdirSync(RUNTIME_ROOT, { recursive: true })
   const preparePrimary = () => packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'prepare:primary-runtime',

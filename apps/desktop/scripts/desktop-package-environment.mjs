@@ -34,6 +34,15 @@ export function localMacOSPackageEnvironment(environment = process.env) {
 }
 
 /**
+ * Select unsigned local defaults for a Linux x64 packaging run without reading dotenv files.
+ * @param {NodeJS.ProcessEnv} environment Parent environment, retained for build tools and networking.
+ * @returns {NodeJS.ProcessEnv} Unsigned build environment with the standard application identifier and no update policy.
+ */
+export function localLinuxPackageEnvironment(environment = process.env) {
+  return localMacOSPackageEnvironment(environment)
+}
+
+/**
  * Read a machine preset when selected, otherwise the target's required dotenv; no ambient release fallback.
  * PACKAGE_MACOS_ZIP_COMPRESSION_LEVEL overrides the Mac file setting with 3 or 7; an empty value is invalid.
  * Any defined Mac ZIP override rejects Windows, including an empty value; nonempty Windows overrides reject macOS.
@@ -121,6 +130,11 @@ export function validateDesktopPackageEnvironment(environment, target, options =
   resolveDesktopTargetBuildPaths(environment, target.platform, target.arch)
   resolveDesktopAppId(environment)
   resolveNpmRegistry(environment)
+  if (target.platform === 'linux') {
+    // Local Linux builds are unsigned-only: no signing, notarization, update or policy inputs apply.
+    if (!options.unsigned) throw new Error('desktop package: linux-x64 supports unsigned local builds only')
+    return
+  }
   if (target.platform !== 'darwin' || !options.unsigned) resolveDesktopPolicyEnvironment(environment)
   if (target.platform === 'darwin') resolveMacOSPackageSettings(environment)
   else resolveWindowsPackageSettings(environment)
