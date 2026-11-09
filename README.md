@@ -72,6 +72,7 @@ Notes:
 - The packaged app shows the "DSH Local Build" label; the official branding is reserved for signed builds.
 - On networks where GitHub release assets return 504, prefix the packaging or Electron download commands with `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`.
 - Web and desktop keep separate Harness homes, so sessions, credentials and plugins do not cross over.
+- The web UI binds `127.0.0.1` and is protected by a per-launch token: the launcher prints `http://127.0.0.1:3080/?token=…` and opens the browser with it. The port and token change on every restart, so never bookmark the URL — relaunch instead and use the freshly printed line (the desktop window carries its credentials automatically). Passing `--no-open` keeps the server running without opening a browser.
 
 ## Community and support
 
