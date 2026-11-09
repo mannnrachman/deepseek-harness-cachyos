@@ -1,4 +1,4 @@
-/** Exercise filtered Desktop native and HTML dependencies under its Electron Node runtime. */
+/** Exercise filtered Desktop native and HTML dependencies under its production Node runtime. */
 
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -14,10 +14,18 @@ const runtime = process.argv[2]
 assert.ok(runtime, 'Pass the filtered resources/dsh directory')
 const root = resolve(runtime)
 const descriptor = JSON.parse(readFileSync(join(root, 'desktop-runtime.json'), 'utf8'))
-assert.equal(process.versions.node, descriptor.release.nodeVersion, 'Run with the Electron Node runtime version')
+const resourcesRuntime = process.argv[3] ?? join(dirname(root), 'runtime')
+// Linux runs this payload under the bundled standalone Node, which is the Host's production
+// runtime; every other target runs under Electron's Node mode, whose version the descriptor
+// records.
+if (process.platform === 'linux') {
+  assert.equal(resolve(process.execPath), resolve(join(resourcesRuntime, 'primary-runtime', 'dependencies', 'node', 'bin', 'node')),
+    'Run with the payload\'s bundled standalone Node')
+} else {
+  assert.equal(process.versions.node, descriptor.release.nodeVersion, 'Run with the Electron Node runtime version')
+}
 assert.equal(process.platform, descriptor.platform)
 assert.equal(process.arch, descriptor.arch)
-const resourcesRuntime = process.argv[3] ?? join(dirname(root), 'runtime')
 const requireRuntime = createRequire(join(root, 'package.json'))
 const scratch = mkdtempSync(join(tmpdir(), 'dsh-runtime-payload-'))
 
@@ -108,29 +116,8 @@ function checkKoffi() {
 
 /** Encode and decode a pixel through the packaged libvips binary. */
 async function checkSharp() {
-  // Electron's Node runtime on Linux crashes libvips' worker pool on the second operation
-  // (the first conversion succeeds, the next one segfaults; plain Node 24 passes). The
-  // payload's bundled standalone Node exercises the identical packaged binary, so Linux
-  // runs this check there.
-  if (process.platform === 'linux') {
-    const node = join(resourcesRuntime, 'primary-runtime', 'dependencies', 'node', 'bin', 'node')
-    const script = `
-      (async () => {
-        const { createRequire } = require('node:module')
-        const assert = require('node:assert/strict')
-        const sharp = createRequire(${JSON.stringify(root)})('sharp')
-        const pixel = Buffer.from([17, 103, 231])
-        const png = await sharp(pixel, { raw: { width: 1, height: 1, channels: 3 } }).png().toBuffer()
-        const decoded = await sharp(png).raw().toBuffer({ resolveWithObject: true })
-        assert.equal(decoded.info.width, 1)
-        assert.equal(decoded.info.height, 1)
-        assert.equal(decoded.info.channels, 3)
-        assert.deepEqual(Array.from(decoded.data), [17, 103, 231])
-      })().catch(error => { console.error(error); process.exit(1) })
-    `
-    execFileSync(node, ['--input-type=commonjs', '-e', script], { timeout: 120_000, stdio: 'inherit' })
-    return
-  }
+  // Linux runs this payload under the bundled standalone Node: Electron's Linux binary links the
+  // system glib that crashes this libvips build, while the private Node runs the same binary.
   const sharp = requireRuntime('sharp')
   const pixel = Buffer.from([17, 103, 231])
   const png = await sharp(pixel, { raw: { width: 1, height: 1, channels: 3 } }).png().toBuffer()

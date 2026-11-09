@@ -207,13 +207,22 @@ interface RuntimeResources {
 
 function runtimeResources(): RuntimeResources {
   const development = !app.isPackaged
-  const node = process.execPath
+  const primaryRuntime = development
+    ? developmentPrimaryRuntime()
+    : join(process.resourcesPath, 'runtime', 'primary-runtime')
+  // Linux runs the Host under the payload's bundled standalone Node instead of Electron's binary:
+  // Electron's Linux build links the system glib that crashes the dsh tree's bundled sharp at the
+  // first decode, while the payload's private Node runs the identical packaged binary.
+  const node = process.platform === 'linux' ? join(primaryRuntime, 'dependencies', 'node', 'bin', 'node') : process.execPath
   const nodeBin = development ? join(app.getAppPath(), 'scripts', 'node-bin') : join(process.resourcesPath, 'runtime', 'bin')
   const pnpm = (development ? process.env.DSH_DESKTOP_PNPM_ENTRY : undefined)
     ?? (development ? join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
-      : join(process.resourcesPath, 'runtime', 'primary-runtime', 'dependencies', 'pnpm', 'bin', 'pnpm.mjs'))
+      : join(primaryRuntime, 'dependencies', 'pnpm', 'bin', 'pnpm.mjs'))
   const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
-    ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh'))
+    ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project')
+      // The Linux Host is the standalone Node, which cannot read ASAR, so its tree ships as real
+      // files beside the archive instead of inside it.
+      : process.platform === 'linux' ? join(process.resourcesPath, 'dsh') : join(app.getAppPath(), 'dsh'))
   return { node, nodeBin, pnpm, dsh }
 }
 

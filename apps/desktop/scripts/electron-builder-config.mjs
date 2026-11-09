@@ -1,7 +1,7 @@
 import { readInstallerLocales, renderInstallerStrings } from './installer-locales.mjs'
 import { officePackageDirectories } from '../../../scripts/libreoffice-packages.mjs'
 import { X509Certificate } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { cpSync, readFileSync, rmSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -152,9 +152,13 @@ export function createElectronBuilderConfig(
       'package.json',
       '!node_modules/**/*.{js,cjs,mjs,ts,cts,mts,css}.map',
       '!node_modules/**/*.tsbuildinfo',
-      { from: buildPaths.dsh, to: 'dsh', filter: ['**/*'] },
-      // electron-builder excludes a source directory's root node_modules.
-      { from: join(buildPaths.dsh, 'node_modules'), to: 'dsh/node_modules', filter: ['**/*'] },
+      // The Linux Host is the payload's bundled standalone Node, which cannot read ASAR, so the
+      // dsh tree ships as real files under resources (afterPack) instead of inside the archive.
+      ...(resolvedPlatform === 'linux' ? [] : [
+        { from: buildPaths.dsh, to: 'dsh', filter: ['**/*'] },
+        // electron-builder excludes a source directory's root node_modules.
+        { from: join(buildPaths.dsh, 'node_modules'), to: 'dsh/node_modules', filter: ['**/*'] },
+      ]),
     ],
     asarUnpack: unpack,
     extraResources: [
@@ -214,6 +218,14 @@ export function createElectronBuilderConfig(
         preparedRuntimeVersion ?? productVersion, { platform: resolvedPlatform, arch: resolvedArch })
       // Unsigned Windows builds skip electron-builder's afterSign hook.
       if (packagesWindows && unsigned) await verifyWindowsAsarUnpack(buildPaths.dsh, resourcesDir, windowsCode)
+      if (resolvedPlatform === 'linux') {
+        // The Linux Host reads real files under the payload's bundled Node: copy the verified dsh
+        // tree beside the archive (dereferenced — electron-builder's resource filters drop
+        // node_modules directories).
+        const destination = join(resourcesDir, 'dsh')
+        rmSync(destination, { recursive: true, force: true })
+        cpSync(buildPaths.dsh, destination, { recursive: true, dereference: true })
+      }
     },
     afterSign: async context => {
       if (windowsSigner !== undefined) {
