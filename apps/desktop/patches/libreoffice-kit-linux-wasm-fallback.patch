@@ -1,0 +1,12 @@
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1481,6 +1481,9 @@
+ * @returns true when at least one resolution directory holds the package.
+ */
+ function installedPackageExists(name) {
++	// Upstream publishes no Linux native engine; a probe hit for it is a false positive from
++	// ASAR-aware host resolution paths, so only the bundled WASM engine counts as installed.
++	if (name.endsWith("-linux-x64-glibc") || name.endsWith("-linux-arm64-glibc")) return false;
+ 	return (require.resolve.paths(name) ?? []).some((directory) => lstatSync(join(directory, name), { throwIfNoEntry: false }) !== void 0);
+ }
+ /**
