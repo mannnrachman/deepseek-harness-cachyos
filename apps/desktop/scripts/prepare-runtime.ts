@@ -17,7 +17,8 @@ import { prepareCommandLink } from './prepare-command-link.ts'
 const BUILD_PATHS = resolveDesktopTargetBuildPaths()
 const RUNTIME_ROOT = BUILD_PATHS.runtime
 
-type DesktopTarget = ReturnType<typeof desktopTargetPlatform>
+// Release preparation supports macOS and Windows only; main() rejects linux-x64 before reaching these helpers.
+type DesktopTarget = { readonly platform: 'win32' | 'darwin'; readonly arch: 'arm64' | 'x64' }
 
 /** Extract the target Electron distribution and return its embedded Node version. */
 async function prepareElectron({ platform, arch }: DesktopTarget): Promise<string> {
@@ -50,7 +51,9 @@ function prepareCli({ platform, arch }: DesktopTarget): void {
 
 async function main(): Promise<void> {
   const { values } = parseArgs({ options: { 'defer-primary-runtime-smoke': { type: 'boolean', default: false } } })
-  const target = desktopTargetPlatform(resolveDesktopBuildTarget())
+  const releaseTarget = resolveDesktopBuildTarget()
+  if (releaseTarget === 'linux-x64') throw new Error('desktop runtime preparation supports macOS and Windows release targets only')
+  const target = desktopTargetPlatform(releaseTarget)
   rmSync(RUNTIME_ROOT, { recursive: true, force: true })
   mkdirSync(RUNTIME_ROOT, { recursive: true })
   const preparePrimary = () => packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'prepare:primary-runtime',

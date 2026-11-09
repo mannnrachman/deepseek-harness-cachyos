@@ -4,7 +4,8 @@ import { isAbsolute, join, resolve } from 'node:path'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
-const SUPPORTED_TARGETS = new Set(['mac-arm64', 'mac-x64', 'win-x64'])
+// linux-x64 exists for unpackaged development launches only; release packaging and update deployment remain macOS/Windows.
+const SUPPORTED_TARGETS = new Set(['mac-arm64', 'mac-x64', 'win-x64', 'linux-x64'])
 
 /**
  * Resolve the fixed build target selected by a packaging environment.
@@ -26,7 +27,7 @@ export function resolveDesktopBuildTarget(
   if (!SUPPORTED_TARGETS.has(target)) {
     throw new Error(`desktop build paths: unsupported target ${target}`)
   }
-  return /** @type {'mac-arm64' | 'mac-x64' | 'win-x64'} */ (target)
+  return /** @type {'mac-arm64' | 'mac-x64' | 'win-x64' | 'linux-x64'} */ (target)
 }
 
 function assertSupportedTarget(target) {
@@ -79,6 +80,7 @@ export function desktopTargetPlatform(target) {
     'mac-arm64': { platform: 'darwin', arch: 'arm64' },
     'mac-x64': { platform: 'darwin', arch: 'x64' },
     'win-x64': { platform: 'win32', arch: 'x64' },
+    'linux-x64': { platform: 'linux', arch: 'x64' },
   })
   return targets[target]
 }
