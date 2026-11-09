@@ -42,28 +42,26 @@ pnpm dsh web
 
 ## Linux desktop (Arch/CachyOS fork build)
 
-This fork adds an unsigned Linux x64 desktop target with a validated Linux runtime. Requirements (Node.js ≥ 24.9):
+This fork adds an unsigned Linux x64 desktop target with a validated Linux runtime (Node.js ≥ 24.9). Fresh machine, one command:
 
 ```sh
-sudo pacman -S --needed nodejs npm pnpm git base-devel
+curl -fsSL https://raw.githubusercontent.com/mannnrachman/deepseek-harness-cachyos/master/install.sh | bash
 ```
 
-Run from this checkout after `pnpm install && pnpm run build`:
+The installer clones this checkout to `~/deepseek-harness-cachyos`, installs prerequisites (Arch: nodejs/npm/pnpm/git/base-devel), builds everything, packages the desktop app and registers the menu entry.
 
-```sh
-pnpm run start:desktop      # Electron desktop window (development layout)
-pnpm run start:web          # the same UI served at http://127.0.0.1:3080
-```
+Everyday commands from the checkout — `./dsh.sh <command>`:
 
-Build and install the packaged desktop app:
+| Command | What it does |
+|---|---|
+| `./dsh.sh install` | First-time setup: prerequisites, dependencies, full build |
+| `./dsh.sh web` | Run the Web UI at http://127.0.0.1:3080 |
+| `./dsh.sh desktop` | Run the Electron desktop window |
+| `./dsh.sh desktop-install` | Package + install the desktop app and menu entry |
+| `./dsh.sh update` | Pull, rebuild, reinstall — the only update command you need |
+| `./dsh.sh doctor` | Environment status |
 
-```sh
-pnpm run package:desktop:linux:x64:dir
-rm -rf ~/.local/opt/deepseek-harness
-cp -a apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked ~/.local/opt/deepseek-harness
-```
-
-Point a menu entry at `~/.local/opt/deepseek-harness/deepseek-harness`, or run `./update-desktop.sh` to pull, rebuild, repackage and reinstall in one step. The full pipeline (payload smoke, Host boot, DOCX/XLSX/PPTX→PDF conversion) runs as part of packaging.
+Manual equivalents remain available (`pnpm run start:web`, `pnpm run start:desktop`, `pnpm run package:desktop:linux:x64:dir`). The full pipeline (payload smoke, Host boot, DOCX/XLSX/PPTX→PDF conversion) runs as part of packaging.
 
 Notes:
 
