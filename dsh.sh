@@ -74,6 +74,8 @@ cmd_install() {
   ensure_prerequisites
   info "Installing dependencies (pnpm install --frozen-lockfile)..."
   (cd "$ROOT" && pnpm install --frozen-lockfile)
+  info "Fetching the locked Electron binary..."
+  (cd "$ROOT" && pnpm --filter @deepseek-ai/dsh-desktop exec install-electron)
   info "Building web + desktop artifacts (several minutes)..."
   (cd "$ROOT" && pnpm run build)
   ok "Source checkout ready. Try: ./dsh.sh web  |  ./dsh.sh desktop  |  ./dsh.sh desktop-install"
