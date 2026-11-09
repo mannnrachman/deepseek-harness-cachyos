@@ -108,6 +108,29 @@ function checkKoffi() {
 
 /** Encode and decode a pixel through the packaged libvips binary. */
 async function checkSharp() {
+  // Electron's Node runtime on Linux crashes libvips' worker pool on the second operation
+  // (the first conversion succeeds, the next one segfaults; plain Node 24 passes). The
+  // payload's bundled standalone Node exercises the identical packaged binary, so Linux
+  // runs this check there.
+  if (process.platform === 'linux') {
+    const node = join(resourcesRuntime, 'primary-runtime', 'dependencies', 'node', 'bin', 'node')
+    const script = `
+      (async () => {
+        const { createRequire } = require('node:module')
+        const assert = require('node:assert/strict')
+        const sharp = createRequire(${JSON.stringify(root)})('sharp')
+        const pixel = Buffer.from([17, 103, 231])
+        const png = await sharp(pixel, { raw: { width: 1, height: 1, channels: 3 } }).png().toBuffer()
+        const decoded = await sharp(png).raw().toBuffer({ resolveWithObject: true })
+        assert.equal(decoded.info.width, 1)
+        assert.equal(decoded.info.height, 1)
+        assert.equal(decoded.info.channels, 3)
+        assert.deepEqual(Array.from(decoded.data), [17, 103, 231])
+      })().catch(error => { console.error(error); process.exit(1) })
+    `
+    execFileSync(node, ['--input-type=commonjs', '-e', script], { timeout: 120_000, stdio: 'inherit' })
+    return
+  }
   const sharp = requireRuntime('sharp')
   const pixel = Buffer.from([17, 103, 231])
   const png = await sharp(pixel, { raw: { width: 1, height: 1, channels: 3 } }).png().toBuffer()
