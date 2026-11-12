@@ -1,6 +1,6 @@
 --- a/lib/index.js
 +++ b/lib/index.js
-@@ -1481,6 +1481,9 @@
+@@ -1573,6 +1573,9 @@
  * @returns true when at least one resolution directory holds the package.
  */
  function installedPackageExists(name) {
