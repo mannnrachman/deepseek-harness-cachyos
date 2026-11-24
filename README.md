@@ -71,6 +71,7 @@ Notes:
 - On networks where GitHub release assets return 504, prefix the packaging or Electron download commands with `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`.
 - Web and desktop keep separate Harness homes, so sessions, credentials and plugins do not cross over.
 - The web UI binds `127.0.0.1` and is protected by a per-launch token: the launcher prints `http://127.0.0.1:3080/?token=…` and opens the browser with it. The port and token change on every restart, so never bookmark the URL — relaunch instead and use the freshly printed line (the desktop window carries its credentials automatically). Passing `--no-open` keeps the server running without opening a browser.
+- Web search works without a DeepSeek account or API key: this fork bundles `@deepseek-ai/dsh-web-search-chain`, a fallback chain ported from [oh-my-pi](https://github.com/can1357/oh-my-pi)'s provider chain, and configures it as the default search provider. It tries Parallel (keyless) → DuckDuckGo → SearXNG → Brave → Tavily in order and returns the first usable answer. Set `SEARXNG_ENDPOINT`, `BRAVE_API_KEY` or `TAVILY_API_KEY` to enable those engines, or pick another provider under Settings → Web Search to use DeepSeek search instead.
 
 ## Community and support
 

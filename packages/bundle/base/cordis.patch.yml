@@ -496,9 +496,14 @@
     # search provider and Web fetch provider
     # menus on the Web search and fetch settings page select a provider for each
     # capability in place of these defaults.
+    # This fork pins the search provider to its credential-free fallback chain
+    # (web-search-chain), so web_search works without a DeepSeek account or API
+    # key whatever state such a credential is in; the Settings menu still
+    # replaces this default.
     - id: web
       name: '@deepseek-ai/dsh-web'
       config:
+        searchProvider: omp-chain
         fetchProvider: http
 
     - id: web-search-deepseek
@@ -511,6 +516,9 @@
 
     - id: web-fetch-http
       name: '@deepseek-ai/dsh-web-fetch-http'
+
+    - id: web-search-chain
+      name: '@deepseek-ai/dsh-web-search-chain'
 
     - id: tool-web
       name: '@deepseek-ai/dsh-tool-web'
